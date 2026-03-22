@@ -12,6 +12,9 @@ echo '==> Rodando setup completo'
 ./scripts/06-docker.sh
 ./scripts/07-nvidia.sh
 ./scripts/08-ollama.sh
+./scripts/10-vscode.sh
+./scripts/11-nvidia-container-toolkit.sh
+./scripts/12-pytorch-gpu-test.sh
 ./scripts/09-validate.sh
 
 echo '==> Setup concluído'
