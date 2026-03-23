@@ -44,6 +44,11 @@ elif has_cmd whiptail && [[ -t 1 ]]; then
   ui_backend='whiptail'
 fi
 
+GUM_TITLE_COLOR='#D946EF'
+GUM_ACCENT_COLOR='#7C3AED'
+GUM_SUCCESS_COLOR='#22C55E'
+GUM_WARNING_COLOR='#F59E0B'
+
 check_system() {
   status_line 'Sistema atualizado' partial 'sempre reexecutável via apt'
 }
@@ -144,8 +149,15 @@ PY
 
 print_status_dashboard() {
   clear || true
-  title 'setup-linux-ia :: painel de status'
-  printf '%bAmbiente atual%b\n\n' "$C_DIM" "$C_RESET"
+  if [[ "$ui_backend" == 'gum' ]]; then
+    gum style --foreground "$GUM_TITLE_COLOR" --bold 'setup-linux-ia :: painel de status'
+    gum style --foreground 245 'Ambiente atual'
+    printf '\n'
+  else
+    title 'setup-linux-ia :: painel de status'
+    printf '%bAmbiente atual%b\n\n' "$C_DIM" "$C_RESET"
+  fi
+
   check_system
   check_dev_base
   check_zsh
@@ -162,7 +174,7 @@ print_status_dashboard() {
 }
 
 gum_banner() {
-  gum style --foreground 212 --border rounded --border-foreground 99 --padding '0 1' \
+  gum style --foreground "$GUM_TITLE_COLOR" --border rounded --border-foreground "$GUM_ACCENT_COLOR" --padding '0 1' \
     'setup-linux-ia :: assistente interativo'
 }
 
@@ -216,6 +228,22 @@ run_selected_steps_whiptail() {
   } | whiptail --gauge 'Executando etapas selecionadas...' 12 80 0
 }
 
+run_selected_steps_gum() {
+  local -a indexes=("$@")
+  local total="${#indexes[@]}"
+  local i idx
+
+  for i in "${!indexes[@]}"; do
+    idx="${indexes[$i]}"
+    gum style --foreground "$GUM_WARNING_COLOR" "→ ${STEP_LABELS[$idx]}"
+    gum spin --spinner dot --title "Executando etapa..." -- "${STEP_SCRIPTS[$idx]}"
+    local done_count=$(( i + 1 ))
+    local percent=$(( done_count * 100 / total ))
+    gum style --foreground "$GUM_SUCCESS_COLOR" "✓ ${STEP_LABELS[$idx]} concluído (${done_count}/${total})"
+    gum style --foreground "$GUM_ACCENT_COLOR" "Progresso geral: ${percent}%"
+  done
+}
+
 run_selected_steps() {
   local -a indexes=("$@")
   if [[ "${#indexes[@]}" -eq 0 ]]; then
@@ -224,6 +252,7 @@ run_selected_steps() {
   fi
 
   case "$ui_backend" in
+    gum) run_selected_steps_gum "${indexes[@]}" ;;
     whiptail) run_selected_steps_whiptail "${indexes[@]}" ;;
     *) run_selected_steps_plain "${indexes[@]}" ;;
   esac
@@ -310,6 +339,8 @@ pick_action() {
   case "$ui_backend" in
     gum)
       gum_banner
+      gum style --foreground 245 --margin '1 0' \
+        'Use ↑↓ para navegar e Enter para confirmar.'
       gum choose \
         'Executar etapas selecionadas' \
         'Rodar setup completo' \
