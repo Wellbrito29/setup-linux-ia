@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo '==> Rodando setup completo'
 
-./scripts/00-system-update.sh
-./scripts/01-dev-base.sh
-./scripts/02-zsh-ohmyzsh.sh
-./scripts/03-go.sh
-./scripts/04-node-nvm.sh
-./scripts/05-python-ia.sh
-./scripts/06-docker.sh
-./scripts/07-nvidia.sh
-./scripts/08-ollama.sh
-./scripts/10-vscode.sh
-./scripts/11-nvidia-container-toolkit.sh
-./scripts/12-pytorch-gpu-test.sh
-./scripts/09-validate.sh
+"$SCRIPT_DIR/00-system-update.sh"
+"$SCRIPT_DIR/01-dev-base.sh"
+"$SCRIPT_DIR/02-zsh-ohmyzsh.sh"
+"$SCRIPT_DIR/03-go.sh"
+"$SCRIPT_DIR/04-node-nvm.sh"
+"$SCRIPT_DIR/05-python-ia.sh"
+"$SCRIPT_DIR/06-docker.sh"
+"$SCRIPT_DIR/07-nvidia.sh"
+"$SCRIPT_DIR/08-ollama.sh"
+"$SCRIPT_DIR/10-vscode.sh"
+"$SCRIPT_DIR/11-nvidia-container-toolkit.sh"
+"$SCRIPT_DIR/12-pytorch-gpu-test.sh"
+"$SCRIPT_DIR/09-validate.sh"
 
 echo '==> Setup concluído'
