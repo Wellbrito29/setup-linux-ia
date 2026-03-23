@@ -18,6 +18,7 @@ test_bin node
 test_bin npm
 test_bin python3
 test_bin pip
+test_bin pip3
 test_bin docker
 test_bin ollama
 test_bin code

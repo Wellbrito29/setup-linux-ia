@@ -187,6 +187,7 @@ sudo apt-get install -y whiptail
 - Oh My Zsh só instala se não existir.
 - Plugins Zsh externos só clonam quando ausentes.
 - NVM só instala se `~/.nvm` não existir.
+- `scripts/05-python-ia.sh` reaproveita o venv existente e só instala pacotes quando necessário.
 - VS Code só instala se `code` não estiver disponível.
 - Ollama só instala se o binário não existir.
 
