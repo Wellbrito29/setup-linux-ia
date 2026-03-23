@@ -44,6 +44,47 @@ Setup completo para preparar um Linux (foco em Ubuntu) para **desenvolvimento** 
 
 ---
 
+## Pré-requisitos
+
+- Linux (foco em Ubuntu/Debian).
+- Terminal com suporte interativo (TTY).
+- Permissão de `sudo`.
+- Para melhor experiência no modo interativo, tenha pelo menos um backend de UI instalado:
+  - `gum` (preferido)
+  - `whiptail` (fallback)
+  - `plain` (fallback automático, sem instalação)
+
+### Instalar os backends de interface
+
+#### 1) `gum` (preferido)
+
+Escolha uma das opções abaixo:
+
+```bash
+# Homebrew (Linux/macOS)
+brew install gum
+```
+
+```bash
+# Via Go
+go install github.com/charmbracelet/gum@latest
+```
+
+Ou siga as instruções oficiais: <https://github.com/charmbracelet/gum>.
+
+#### 2) `whiptail` (Ubuntu/Debian)
+
+```bash
+sudo apt-get update
+sudo apt-get install -y whiptail
+```
+
+#### 3) `plain`
+
+Não precisa instalar nada. Esse modo é usado automaticamente quando `gum` e `whiptail` não estão disponíveis.
+
+---
+
 ## Uso rápido
 
 ### 1) Executar tudo
@@ -91,7 +132,7 @@ O script detecta automaticamente:
 
 ### Instalar gum (opcional)
 
-Veja instruções oficiais em: <https://github.com/charmbracelet/gum>
+Use uma das opções da seção **Pré-requisitos** acima ou as instruções oficiais: <https://github.com/charmbracelet/gum>.
 
 ### Instalar whiptail (Ubuntu/Debian)
 
