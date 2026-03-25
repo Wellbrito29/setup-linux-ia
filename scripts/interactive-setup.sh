@@ -5,6 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./common.sh
 source "$SCRIPT_DIR/common.sh"
 
+# Garante que o terminal seja restaurado em qualquer saída (erro, Ctrl+C, etc.)
+trap 'tput reset 2>/dev/null || reset 2>/dev/null || true' EXIT INT TERM
+
 STEP_LABELS=(
   'Atualizar sistema'
   'Instalar base dev'
@@ -148,6 +151,29 @@ PY
 }
 
 print_status_dashboard() {
+  if [[ "$ui_backend" == 'whiptail' ]]; then
+    local text
+    text=$(
+      C_RESET='' C_BOLD='' C_DIM='' C_RED='' C_GREEN=''
+      C_YELLOW='' C_BLUE='' C_MAGENTA='' C_CYAN=''
+      check_system
+      check_dev_base
+      check_zsh
+      check_go
+      check_node
+      check_python_ia
+      check_docker
+      check_nvidia
+      check_ollama
+      check_vscode
+      check_nvidia_toolkit
+      check_pytorch
+    )
+    whiptail --title 'setup-linux-ia :: painel de status' \
+      --msgbox "Ambiente atual:\n\n$text" 22 60
+    return
+  fi
+
   clear || true
   if [[ "$ui_backend" == 'gum' ]]; then
     gum style --foreground "$GUM_TITLE_COLOR" --bold 'setup-linux-ia :: painel de status'
@@ -195,7 +221,8 @@ run_selected_steps_plain() {
 
   for i in "${!indexes[@]}"; do
     idx="${indexes[$i]}"
-    run_step "${STEP_LABELS[$idx]}" "${STEP_SCRIPTS[$idx]}"
+    run_step "${STEP_LABELS[$idx]}" "${STEP_SCRIPTS[$idx]}" || \
+      warn "Etapa '${STEP_LABELS[$idx]}' falhou. Continuando..."
 
     local done_count=$(( i + 1 ))
     local percent=$(( done_count * 100 / total ))
@@ -209,23 +236,30 @@ run_selected_steps_whiptail() {
   local -a indexes=("$@")
   local total="${#indexes[@]}"
   local i idx
+  local -a failed=()
 
-  {
-    echo 0
-    echo "XXX"
-    echo "Iniciando execução..."
-    echo "XXX"
+  for i in "${!indexes[@]}"; do
+    idx="${indexes[$i]}"
+    local label="${STEP_LABELS[$idx]}"
+    local percent=$(( i * 100 / total ))
+    whiptail --infobox "[$(( i + 1 ))/$total] Executando: $label" 7 60
 
-    for i in "${!indexes[@]}"; do
-      idx="${indexes[$i]}"
-      run_step "${STEP_LABELS[$idx]}" "${STEP_SCRIPTS[$idx]}"
-      local percent=$(( (i + 1) * 100 / total ))
-      echo "$percent"
-      echo "XXX"
-      echo "${STEP_LABELS[$idx]} concluído (${i + 1}/${total})"
-      echo "XXX"
-    done
-  } | whiptail --gauge 'Executando etapas selecionadas...' 12 80 0
+    local log_file
+    log_file=$(mktemp)
+    if ! bash "${STEP_SCRIPTS[$idx]}" >"$log_file" 2>&1; then
+      failed+=("$label")
+      whiptail --title "Erro: $label" --scrolltext --textbox "$log_file" 20 80
+    fi
+    rm -f "$log_file"
+  done
+
+  if [[ ${#failed[@]} -gt 0 ]]; then
+    local msg="Etapas com falha:\n"
+    for s in "${failed[@]}"; do msg+="  - $s\n"; done
+    whiptail --title 'Resultado' --msgbox "$msg" 15 60
+  else
+    whiptail --title 'Concluído' --msgbox 'Todas as etapas foram concluídas.' 8 50
+  fi
 }
 
 run_selected_steps_gum() {
@@ -236,10 +270,13 @@ run_selected_steps_gum() {
   for i in "${!indexes[@]}"; do
     idx="${indexes[$i]}"
     gum style --foreground "$GUM_WARNING_COLOR" "→ ${STEP_LABELS[$idx]}"
-    gum spin --spinner dot --title "Executando etapa..." -- "${STEP_SCRIPTS[$idx]}"
     local done_count=$(( i + 1 ))
     local percent=$(( done_count * 100 / total ))
-    gum style --foreground "$GUM_SUCCESS_COLOR" "✓ ${STEP_LABELS[$idx]} concluído (${done_count}/${total})"
+    if gum spin --spinner dot --title "Executando etapa..." -- bash "${STEP_SCRIPTS[$idx]}"; then
+      gum style --foreground "$GUM_SUCCESS_COLOR" "✓ ${STEP_LABELS[$idx]} concluído (${done_count}/${total})"
+    else
+      gum style --foreground "$GUM_WARNING_COLOR" "✗ ${STEP_LABELS[$idx]} falhou (${done_count}/${total})"
+    fi
     gum style --foreground "$GUM_ACCENT_COLOR" "Progresso geral: ${percent}%"
   done
 }
@@ -283,8 +320,9 @@ pick_steps_whiptail() {
 
 pick_steps_gum() {
   local output
-  if ! output=$(printf '%s\n' "${STEP_LABELS[@]}" | \
-    gum choose --no-limit --header 'Selecione as etapas (↑↓ para navegar, espaço para marcar, enter para confirmar):'); then
+  if ! output=$(gum choose --no-limit \
+    --header 'Selecione as etapas (↑↓ para navegar, espaço para marcar, enter para confirmar):' \
+    "${STEP_LABELS[@]}"); then
     return 1
   fi
 
