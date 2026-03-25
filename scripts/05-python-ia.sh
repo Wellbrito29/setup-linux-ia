@@ -5,10 +5,13 @@ VENV_DIR="${VENV_DIR:-$HOME/venvs/ia}"
 PYTHON_BIN="$VENV_DIR/bin/python"
 PIP_BIN="$VENV_DIR/bin/pip"
 
-echo '==> Instalando Python e criando ambiente virtual para IA'
-sudo apt update
-sudo apt install -y python3 python3-pip python3-venv
 mkdir -p "$(dirname "$VENV_DIR")"
+
+# Instala python3-venv via apt só se não estiver disponível
+if ! python3 -m venv --help >/dev/null 2>&1; then
+  echo '==> Instalando python3-venv'
+  sudo apt -o DPkg::Lock::Timeout=120 install -y python3-venv
+fi
 
 if [[ -d "$VENV_DIR" ]]; then
   echo "[skip] Venv já existe em $VENV_DIR"

@@ -8,8 +8,8 @@ if command -v docker >/dev/null 2>&1; then
 fi
 
 echo '==> Instalando Docker'
-sudo apt update
-sudo apt install -y docker.io docker-compose-v2
+sudo apt -o DPkg::Lock::Timeout=120 update
+sudo apt -o DPkg::Lock::Timeout=120 install -y docker.io docker-compose-v2
 sudo systemctl enable docker
 sudo systemctl start docker
 sudo usermod -aG docker "$USER"

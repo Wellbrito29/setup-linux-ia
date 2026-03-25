@@ -12,8 +12,8 @@ if command -v git >/dev/null 2>&1 && \
 fi
 
 echo '==> Instalando base de desenvolvimento'
-sudo apt update
-sudo apt install -y \
+sudo apt -o DPkg::Lock::Timeout=120 update
+sudo apt -o DPkg::Lock::Timeout=120 install -y \
   build-essential \
   curl wget git vim nano unzip zip \
   ca-certificates gnupg lsb-release software-properties-common \

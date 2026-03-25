@@ -9,8 +9,8 @@ CUSTOM_DIR="${ZSH_CUSTOM:-$OHMYZSH_DIR/custom}"
 for pkg in zsh git curl; do
   if ! command -v "$pkg" >/dev/null 2>&1; then
     echo "==> Instalando $pkg"
-    sudo apt update
-    sudo apt install -y zsh git curl
+    sudo apt -o DPkg::Lock::Timeout=120 update
+    sudo apt -o DPkg::Lock::Timeout=120 install -y zsh git curl
     break
   fi
 done

@@ -8,8 +8,8 @@ if command -v nvidia-smi >/dev/null 2>&1; then
 fi
 
 echo '==> Verificando drivers NVIDIA disponíveis'
-sudo apt update
-sudo apt install -y ubuntu-drivers-common
+sudo apt -o DPkg::Lock::Timeout=120 update
+sudo apt -o DPkg::Lock::Timeout=120 install -y ubuntu-drivers-common
 ubuntu-drivers devices || true
 
 echo '==> Instalando driver recomendado'

@@ -8,8 +8,8 @@ if command -v code >/dev/null 2>&1; then
 fi
 
 echo '==> Instalando dependências do VS Code'
-sudo apt update
-sudo apt install -y wget gpg apt-transport-https
+sudo apt -o DPkg::Lock::Timeout=120 update
+sudo apt -o DPkg::Lock::Timeout=120 install -y wget gpg apt-transport-https
 
 if [ ! -f /etc/apt/keyrings/packages.microsoft.gpg ]; then
   sudo install -d -m 0755 /etc/apt/keyrings
@@ -26,8 +26,8 @@ Architectures: amd64 arm64 armhf
 Signed-By: /etc/apt/keyrings/packages.microsoft.gpg' | sudo tee /etc/apt/sources.list.d/vscode.sources >/dev/null
 fi
 
-sudo apt update
-sudo apt install -y code
+sudo apt -o DPkg::Lock::Timeout=120 update
+sudo apt -o DPkg::Lock::Timeout=120 install -y code
 
 echo '==> VS Code instalado com sucesso'
 code --version || true

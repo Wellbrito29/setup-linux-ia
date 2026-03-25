@@ -275,15 +275,15 @@ run_selected_steps_gum() {
 
   for i in "${!indexes[@]}"; do
     idx="${indexes[$i]}"
-    gum style --foreground "$GUM_WARNING_COLOR" "→ ${STEP_LABELS[$idx]}"
     local done_count=$(( i + 1 ))
     local percent=$(( done_count * 100 / total ))
-    if gum spin --spinner dot --title "Executando etapa..." -- bash "${STEP_SCRIPTS[$idx]}"; then
-      gum style --foreground "$GUM_SUCCESS_COLOR" "✓ ${STEP_LABELS[$idx]} concluído (${done_count}/${total})"
+    gum style --foreground "$GUM_WARNING_COLOR" --bold "▶ [${done_count}/${total}] ${STEP_LABELS[$idx]}"
+    if bash "${STEP_SCRIPTS[$idx]}"; then
+      gum style --foreground "$GUM_SUCCESS_COLOR" "✓ ${STEP_LABELS[$idx]} concluído"
     else
-      gum style --foreground "$GUM_WARNING_COLOR" "✗ ${STEP_LABELS[$idx]} falhou (${done_count}/${total})"
+      gum style --foreground "$GUM_WARNING_COLOR" "✗ ${STEP_LABELS[$idx]} falhou"
     fi
-    gum style --foreground "$GUM_ACCENT_COLOR" "Progresso geral: ${percent}%"
+    gum style --foreground "$GUM_ACCENT_COLOR" "Progresso: ${percent}% (${done_count}/${total})"
   done
 }
 
@@ -475,9 +475,9 @@ _ACTION_FILE=$(mktemp)
 _STEPS_FILE=$(mktemp)
 trap 'rm -f "$_ACTION_FILE" "$_STEPS_FILE"; tput reset 2>/dev/null || true' EXIT INT TERM
 
-while true; do
-  print_status_dashboard
+print_status_dashboard
 
+while true; do
   if ! pick_action "$_ACTION_FILE"; then
     continue
   fi
@@ -493,19 +493,21 @@ while true; do
       ;;
     4|'Executar apenas pendentes')
       get_pending_indexes > "$_STEPS_FILE"
-      if [[ -s "$_STEPS_FILE" ]]; then
+      if [[ ! -s "$_STEPS_FILE" ]]; then
+        ok 'Tudo já está instalado!'
+        pause
+      else
         mapfile -t indexes < "$_STEPS_FILE"
         run_selected_steps "${indexes[@]}"
-      else
-        ok 'Tudo já está instalado!'
+        pause
       fi
-      pause
       ;;
     2|'Rodar setup completo')
       run_step 'Setup completo' "$SCRIPT_DIR/run-all.sh"
       pause
       ;;
     3|'Atualizar painel de status')
+      print_status_dashboard
       ;;
     0|'Sair')
       break

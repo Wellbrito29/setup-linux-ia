@@ -50,6 +50,11 @@ has_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
+# Wrapper para apt que aguarda o lock ser liberado automaticamente
+apt_get() {
+  sudo apt -o DPkg::Lock::Timeout=120 "$@"
+}
+
 append_if_missing() {
   local file="$1"
   local line="$2"
