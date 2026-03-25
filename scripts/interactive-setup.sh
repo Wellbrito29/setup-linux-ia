@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
-set -euo pipefail
+
+if [[ "$EUID" -eq 0 ]]; then
+  echo 'Erro: não rode este script com sudo.'
+  echo 'Execute como usuário normal: bash scripts/interactive-setup.sh'
+  echo 'Os scripts internos chamam sudo quando necessário.'
+  exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./common.sh
@@ -170,7 +176,7 @@ print_status_dashboard() {
       check_pytorch
     )
     whiptail --title 'setup-linux-ia :: painel de status' \
-      --msgbox "Ambiente atual:\n\n$text" 22 60
+      --msgbox "$(printf 'Ambiente atual:\n\n%s' "$text")" 22 60 </dev/tty >/dev/tty
     return
   fi
 
@@ -242,13 +248,13 @@ run_selected_steps_whiptail() {
     idx="${indexes[$i]}"
     local label="${STEP_LABELS[$idx]}"
     local percent=$(( i * 100 / total ))
-    whiptail --infobox "[$(( i + 1 ))/$total] Executando: $label" 7 60
+    whiptail --infobox "[$(( i + 1 ))/$total] Executando: $label" 7 60 >/dev/tty
 
     local log_file
     log_file=$(mktemp)
     if ! bash "${STEP_SCRIPTS[$idx]}" >"$log_file" 2>&1; then
       failed+=("$label")
-      whiptail --title "Erro: $label" --scrolltext --textbox "$log_file" 20 80
+      whiptail --title "Erro: $label" --scrolltext --textbox "$log_file" 20 80 >/dev/tty </dev/tty
     fi
     rm -f "$log_file"
   done
@@ -256,9 +262,9 @@ run_selected_steps_whiptail() {
   if [[ ${#failed[@]} -gt 0 ]]; then
     local msg="Etapas com falha:\n"
     for s in "${failed[@]}"; do msg+="  - $s\n"; done
-    whiptail --title 'Resultado' --msgbox "$msg" 15 60
+    whiptail --title 'Resultado' --msgbox "$msg" 15 60 >/dev/tty </dev/tty
   else
-    whiptail --title 'Concluído' --msgbox 'Todas as etapas foram concluídas.' 8 50
+    whiptail --title 'Concluído' --msgbox 'Todas as etapas foram concluídas.' 8 50 >/dev/tty </dev/tty
   fi
 }
 
@@ -281,6 +287,41 @@ run_selected_steps_gum() {
   done
 }
 
+# Retorna 0 se a etapa já está instalada/ok, 1 se está pendente
+step_is_ok() {
+  local idx="$1"
+  case "$idx" in
+    0) return 1 ;;  # system update: sempre reexecutável
+    1) has_cmd git && has_cmd curl && has_cmd gcc && has_cmd python3 && has_cmd make ;;
+    2) [[ -d "$HOME/.oh-my-zsh" ]] && grep -q 'zsh-autosuggestions' "$HOME/.zshrc" 2>/dev/null ;;
+    3) has_cmd go ;;
+    4) has_cmd node && has_cmd npm ;;
+    5) [[ -d "$HOME/venvs/ia" ]] ;;
+    6) has_cmd docker ;;
+    7) has_cmd nvidia-smi ;;
+    8) has_cmd ollama ;;
+    9) has_cmd code ;;
+    10) dpkg -s nvidia-container-toolkit >/dev/null 2>&1 ;;
+    11)
+      [[ -d "$HOME/venvs/ia" ]] && "$HOME/venvs/ia/bin/python" - <<'PY' >/dev/null 2>&1
+import importlib.util, sys
+sys.exit(0 if importlib.util.find_spec('torch') else 1)
+PY
+      ;;
+    12) return 1 ;;  # validate: sempre reexecutável
+    *) return 1 ;;
+  esac
+}
+
+get_pending_indexes() {
+  local i
+  for i in "${!STEP_LABELS[@]}"; do
+    if ! step_is_ok "$i"; then
+      printf '%s\n' "$i"
+    fi
+  done
+}
+
 run_selected_steps() {
   local -a indexes=("$@")
   if [[ "${#indexes[@]}" -eq 0 ]]; then
@@ -296,26 +337,27 @@ run_selected_steps() {
 }
 
 pick_steps_whiptail() {
+  local out="$1"
   local -a options=()
   local i
   for i in "${!STEP_LABELS[@]}"; do
     options+=("$i" "${STEP_LABELS[$i]}" OFF)
   done
 
-  local raw
-  if ! raw=$(whiptail --title 'Selecionar etapas (múltipla escolha)' \
+  local tmp
+  tmp=$(mktemp)
+  whiptail --title 'Selecionar etapas (múltipla escolha)' \
     --checklist 'Use setas para navegar e espaço para marcar:' 22 90 14 \
-    "${options[@]}" 3>&1 1>&2 2>&3); then
-    return 1
-  fi
+    "${options[@]}" 2>"$tmp" || { rm -f "$tmp"; return 1; }
 
   # shellcheck disable=SC2206
-  local -a selected=( $raw )
-  local -a indexes=()
+  local -a selected=( $(cat "$tmp") )
+  rm -f "$tmp"
+
+  local item
   for item in "${selected[@]}"; do
-    indexes+=("${item//\"/}")
-  done
-  printf '%s\n' "${indexes[@]}"
+    printf '%s\n' "${item//\"/}"
+  done > "$out"
 }
 
 pick_steps_gum() {
@@ -342,13 +384,13 @@ pick_steps_gum() {
 
 pick_steps_plain() {
   local i
-  printf 'Digite uma ou mais opções separadas por espaço:\n'
+  printf 'Digite uma ou mais opções separadas por espaço:\n' >/dev/tty
   for i in "${!STEP_LABELS[@]}"; do
-    printf '  %2d) %s\n' "$((i + 1))" "${STEP_LABELS[$i]}"
+    printf '  %2d) %s\n' "$((i + 1))" "${STEP_LABELS[$i]}" >/dev/tty
   done
 
   local answer
-  read -r -p 'Opções: ' answer
+  read -r -p 'Opções: ' answer </dev/tty
 
   local -a raw
   # shellcheck disable=SC2206
@@ -373,7 +415,10 @@ pick_steps() {
   esac
 }
 
+# $1 = arquivo onde o resultado será escrito
+# retorna 0 se uma ação foi escolhida, 1 se o usuário cancelou
 pick_action() {
+  local out="$1"
   case "$ui_backend" in
     gum)
       gum_banner
@@ -381,48 +426,78 @@ pick_action() {
         'Use ↑↓ para navegar e Enter para confirmar.'
       gum choose \
         'Executar etapas selecionadas' \
+        'Executar apenas pendentes' \
         'Rodar setup completo' \
         'Atualizar painel de status' \
-        'Sair'
+        'Sair' > "$out"
       ;;
     whiptail)
-      whiptail --title 'setup-linux-ia' --menu 'Escolha uma ação:' 16 70 6 \
+      whiptail --title 'setup-linux-ia' --menu 'Escolha uma ação:' 18 70 7 \
         1 'Executar etapas selecionadas' \
+        4 'Executar apenas pendentes' \
         2 'Rodar setup completo' \
         3 'Atualizar painel de status' \
-        0 'Sair' 3>&1 1>&2 2>&3
+        0 'Sair' 2>"$out" || return 1
       ;;
     *)
       cat <<'TXT'
 === setup-linux-ia ===
 1) Executar etapas selecionadas
+4) Executar apenas pendentes
 2) Rodar setup completo
 3) Atualizar painel de status
 0) Sair
 TXT
+      local opt
       read -r -p 'Escolha uma opção: ' opt
       case "$opt" in
         1) echo 'Executar etapas selecionadas' ;;
+        4) echo 'Executar apenas pendentes' ;;
         2) echo 'Rodar setup completo' ;;
         3) echo 'Atualizar painel de status' ;;
         *) echo 'Sair' ;;
-      esac
+      esac > "$out"
       ;;
   esac
 }
 
+# $1 = arquivo onde os índices selecionados serão escritos (um por linha)
+pick_steps() {
+  local out="$1"
+  case "$ui_backend" in
+    gum) pick_steps_gum > "$out" ;;
+    whiptail) pick_steps_whiptail "$out" ;;
+    *) pick_steps_plain > "$out" ;;
+  esac
+}
+
+_ACTION_FILE=$(mktemp)
+_STEPS_FILE=$(mktemp)
+trap 'rm -f "$_ACTION_FILE" "$_STEPS_FILE"; tput reset 2>/dev/null || true' EXIT INT TERM
+
 while true; do
   print_status_dashboard
 
-  if ! action=$(pick_action); then
-    break
+  if ! pick_action "$_ACTION_FILE"; then
+    continue
   fi
+  action=$(cat "$_ACTION_FILE")
 
   case "$action" in
     1|'Executar etapas selecionadas')
-      if selected=$(pick_steps); then
-        mapfile -t indexes <<< "$selected"
+      if pick_steps "$_STEPS_FILE" && [[ -s "$_STEPS_FILE" ]]; then
+        mapfile -t indexes < "$_STEPS_FILE"
         run_selected_steps "${indexes[@]}"
+      fi
+      pause
+      ;;
+    4|'Executar apenas pendentes')
+      get_pending_indexes > "$_STEPS_FILE"
+      if [[ -s "$_STEPS_FILE" ]]; then
+        mapfile -t indexes < "$_STEPS_FILE"
+        run_selected_steps "${indexes[@]}"
+      else
+        ok 'Tudo já está instalado!'
       fi
       pause
       ;;
@@ -433,7 +508,7 @@ while true; do
     3|'Atualizar painel de status')
       ;;
     0|'Sair')
-      exit 0
+      break
       ;;
     *)
       warn 'Ação inválida.'

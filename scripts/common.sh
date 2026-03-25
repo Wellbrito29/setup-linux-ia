@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 if [[ -t 1 ]]; then
   C_RESET='\033[0m'
@@ -65,7 +64,7 @@ run_step() {
 }
 
 pause() {
-  read -r -p 'Pressione Enter para continuar...' _
+  read -r -p 'Pressione Enter para continuar...' _ </dev/tty
 }
 
 status_line() {

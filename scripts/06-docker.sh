@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if command -v docker >/dev/null 2>&1; then
+  echo '[skip] Docker já está instalado'
+  docker --version
+  exit 0
+fi
+
 echo '==> Instalando Docker'
 sudo apt update
 sudo apt install -y docker.io docker-compose-v2

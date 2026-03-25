@@ -5,25 +5,35 @@ ZSHRC="$HOME/.zshrc"
 OHMYZSH_DIR="$HOME/.oh-my-zsh"
 CUSTOM_DIR="${ZSH_CUSTOM:-$OHMYZSH_DIR/custom}"
 
-echo '==> Garantindo que zsh e git estão instalados'
-sudo apt update
-sudo apt install -y zsh git curl
+# Instala zsh/git/curl apenas se necessário
+for pkg in zsh git curl; do
+  if ! command -v "$pkg" >/dev/null 2>&1; then
+    echo "==> Instalando $pkg"
+    sudo apt update
+    sudo apt install -y zsh git curl
+    break
+  fi
+done
 
 if [ ! -d "$OHMYZSH_DIR" ]; then
   echo '==> Instalando Oh My Zsh'
   RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 else
-  echo '==> Oh My Zsh já está instalado'
+  echo '[skip] Oh My Zsh já está instalado'
 fi
 
 mkdir -p "$CUSTOM_DIR/plugins"
 
 if [ ! -d "$CUSTOM_DIR/plugins/zsh-autosuggestions" ]; then
   git clone https://github.com/zsh-users/zsh-autosuggestions "$CUSTOM_DIR/plugins/zsh-autosuggestions"
+else
+  echo '[skip] zsh-autosuggestions já existe'
 fi
 
 if [ ! -d "$CUSTOM_DIR/plugins/zsh-syntax-highlighting" ]; then
   git clone https://github.com/zsh-users/zsh-syntax-highlighting "$CUSTOM_DIR/plugins/zsh-syntax-highlighting"
+else
+  echo '[skip] zsh-syntax-highlighting já existe'
 fi
 
 touch "$ZSHRC"

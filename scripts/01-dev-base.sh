@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Verifica se os pacotes principais já estão instalados
+if command -v git >/dev/null 2>&1 && \
+   command -v curl >/dev/null 2>&1 && \
+   command -v gcc >/dev/null 2>&1 && \
+   command -v python3 >/dev/null 2>&1 && \
+   command -v make >/dev/null 2>&1; then
+  echo '[skip] Base de desenvolvimento já instalada'
+  exit 0
+fi
+
 echo '==> Instalando base de desenvolvimento'
 sudo apt update
 sudo apt install -y \
