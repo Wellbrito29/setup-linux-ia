@@ -89,6 +89,9 @@ check_go() {
 }
 
 check_node() {
+  local _nvm_dir="${NVM_DIR:-$HOME/.nvm}"
+  # shellcheck disable=SC1090
+  if [ -s "$_nvm_dir/nvm.sh" ]; then . "$_nvm_dir/nvm.sh" 2>/dev/null || true; fi
   if has_cmd node && has_cmd npm; then
     status_line 'Node / NPM' ok "node $(node -v 2>/dev/null)"
   else
@@ -291,11 +294,16 @@ run_selected_steps_gum() {
 step_is_ok() {
   local idx="$1"
   case "$idx" in
-    0) return 1 ;;  # system update: sempre reexecutável
+    0) return 0 ;;  # system update: não bloqueia pendentes
     1) has_cmd git && has_cmd curl && has_cmd gcc && has_cmd python3 && has_cmd make ;;
     2) [[ -d "$HOME/.oh-my-zsh" ]] && grep -q 'zsh-autosuggestions' "$HOME/.zshrc" 2>/dev/null ;;
     3) has_cmd go ;;
-    4) has_cmd node && has_cmd npm ;;
+    4)
+      local _nvm_dir="${NVM_DIR:-$HOME/.nvm}"
+      # shellcheck disable=SC1090
+      if [ -s "$_nvm_dir/nvm.sh" ]; then . "$_nvm_dir/nvm.sh" 2>/dev/null || true; fi
+      has_cmd node && has_cmd npm
+      ;;
     5) [[ -d "$HOME/venvs/ia" ]] ;;
     6) has_cmd docker ;;
     7) has_cmd nvidia-smi ;;
@@ -308,7 +316,7 @@ import importlib.util, sys
 sys.exit(0 if importlib.util.find_spec('torch') else 1)
 PY
       ;;
-    12) return 1 ;;  # validate: sempre reexecutável
+    12) return 0 ;;  # validate: não bloqueia pendentes
     *) return 1 ;;
   esac
 }
@@ -478,6 +486,8 @@ trap 'rm -f "$_ACTION_FILE" "$_STEPS_FILE"; tput reset 2>/dev/null || true' EXIT
 print_status_dashboard
 
 while true; do
+  # Descarta qualquer input residual antes de exibir o menu
+  read -r -t 0.1 -n 1000 _ </dev/tty 2>/dev/null || true
   if ! pick_action "$_ACTION_FILE"; then
     continue
   fi
