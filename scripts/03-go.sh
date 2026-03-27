@@ -30,6 +30,18 @@ rm -f "/tmp/$GO_TARBALL"
 
 mkdir -p "$GOPATH/bin" "$GOPATH/pkg" "$GOPATH/src"
 
+# Garante que Go está no PATH no .zshrc
+if [ -f "$HOME/.zshrc" ]; then
+  grep -Fq '/usr/local/go/bin' "$HOME/.zshrc" || {
+    echo '' >> "$HOME/.zshrc"
+    echo '# Go' >> "$HOME/.zshrc"
+    echo 'export PATH=$PATH:/usr/local/go/bin' >> "$HOME/.zshrc"
+    echo 'export GOPATH=$HOME/go' >> "$HOME/.zshrc"
+    echo 'export PATH=$PATH:$GOPATH/bin' >> "$HOME/.zshrc"
+    echo '[ok] Go adicionado ao .zshrc'
+  }
+fi
+
 echo '==> Instalando ferramentas úteis do Go'
 /usr/local/go/bin/go install golang.org/x/tools/gopls@latest
 /usr/local/go/bin/go install github.com/go-delve/delve/cmd/dlv@latest
