@@ -195,6 +195,12 @@ sudo apt-get install -y whiptail
 
 ---
 
+## Análise técnica e roadmap
+
+Consulte: [`docs/PROJECT_ANALYSIS.md`](docs/PROJECT_ANALYSIS.md)
+
+---
+
 ## Troubleshooting
 
 Consulte: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
